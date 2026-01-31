@@ -1,5 +1,5 @@
 from core.intent import detect_intent, Intent, extract_action
-from core.Command import Command
+from core.command import Command
 
 
 

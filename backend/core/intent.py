@@ -1,5 +1,5 @@
 from enum import Enum
-from Command import Command
+from core.command import Command
 
 
 class Intent(Enum):
@@ -35,6 +35,14 @@ OBJECTS = {
     "application",
     "app"
 }
+
+def extract_action(user_input: str) -> str | None:
+    text = user_input.lower().strip()
+    for word in text.split():
+        if word in ACTIONS:
+            return word
+    return None
+
 
 
 def parse_command(user_input: str) -> Command | None:
