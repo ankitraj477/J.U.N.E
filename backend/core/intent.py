@@ -1,5 +1,9 @@
 from enum import Enum
-from core.command import Command
+
+try:
+    from backend.core.command import Command
+except ImportError:
+    from core.command import Command
 
 
 class Intent(Enum):
@@ -22,19 +26,11 @@ ACTIONS = {
     "delete",
     "move",
     "copy",
-    "send"
+    "send",
 }
 
-OBJECTS = {
-    "file",
-    "folder",
-    "chrome",
-    "browser",
-    "email",
-    "mail",
-    "application",
-    "app"
-}
+OBJECTS = {"file", "folder", "chrome", "browser", "email", "mail", "application", "app"}
+
 
 def extract_action(user_input: str) -> str | None:
     text = user_input.lower().strip()
@@ -42,7 +38,6 @@ def extract_action(user_input: str) -> str | None:
         if word in ACTIONS:
             return word
     return None
-
 
 
 def parse_command(user_input: str) -> Command | None:
@@ -59,11 +54,7 @@ def parse_command(user_input: str) -> Command | None:
             found_object = word
 
     if found_action and found_object:
-        return Command(
-            action=found_action,
-            object=found_object,
-            raw_text=user_input
-        )
+        return Command(action=found_action, object=found_object, raw_text=user_input)
 
     return None
 
