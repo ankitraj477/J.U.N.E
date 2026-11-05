@@ -1,8 +1,9 @@
-from core.intent import detect_intent, Intent, extract_action
-from core.command import Command
-
-
-
+try:
+    from backend.core.command import Command
+    from backend.core.intent import Intent, detect_intent, extract_action
+except ImportError:
+    from core.command import Command
+    from core.intent import Intent, detect_intent, extract_action
 
 
 def boot():
@@ -15,9 +16,13 @@ def boot():
 
 def ask_confirmation(command: Command) -> bool:
     while True:
-        reply = input(
-            f"JUNE > I understood a command to {command.summary()}. Should I proceed? (yes/no): "
-        ).strip().lower()
+        reply = (
+            input(
+                f"JUNE > I understood a command to {command.summary()}. Should I proceed? (yes/no): "
+            )
+            .strip()
+            .lower()
+        )
 
         if reply in ["yes", "y"]:
             return True
@@ -32,6 +37,7 @@ def ask_confirmation(command: Command) -> bool:
 #         if word in ACTIONS:
 #             return word
 #     return None
+
 
 def core_loop():
     pending_action = None
@@ -77,11 +83,7 @@ def core_loop():
                 continue
 
             action = lowered.split()[0]
-            command = Command(
-                action=action,
-                object=last_command.object,
-                raw_text=user_input
-            )
+            command = Command(action=action, object=last_command.object, raw_text=user_input)
 
             confirmed = ask_confirmation(command)
             if confirmed:
