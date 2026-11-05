@@ -31,10 +31,12 @@ data class ActionProposal(
     val target: String,
     val riskLevel: RiskLevel = RiskLevel.LOW,
     val status: ActionStatus = ActionStatus.PROPOSED,
-    val reason: String = ""
+    val reason: String = "",
+    val parameters: Map<String, String> = emptyMap()
 ) {
     fun summary(): String = "$actionType on '$target' (risk: ${riskLevel.value})"
 }
+
 
 data class Message(
     val id: String = java.util.UUID.randomUUID().toString(),

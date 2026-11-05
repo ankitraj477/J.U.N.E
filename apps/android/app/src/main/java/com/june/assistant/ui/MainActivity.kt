@@ -144,8 +144,10 @@ class MainActivity : ComponentActivity() {
 
                 // If low-risk reminder, schedule it via WorkManager
                 if (p.actionType == "reminder.create" && p.status == ActionStatus.AUTHORIZED) {
-                    scheduleReminder(p.target)
+                    val delaySec = p.parameters["delay_seconds"]?.toLongOrNull() ?: 10L
+                    scheduleReminder(p.target, delaySec)
                 }
+
             }
 
             val assistantMsg = MessageEntity(
@@ -205,18 +207,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun scheduleReminder(reminderText: String) {
+    private fun scheduleReminder(reminderText: String, delaySeconds: Long = 10L) {
         val workData = Data.Builder()
             .putString(ReminderWorker.KEY_REMINDER_TEXT, reminderText)
             .build()
 
         val reminderRequest = OneTimeWorkRequestBuilder<ReminderWorker>()
             .setInputData(workData)
-            .setInitialDelay(5, TimeUnit.SECONDS) // Schedules notification trigger
+            .setInitialDelay(delaySeconds, TimeUnit.SECONDS)
             .build()
 
         WorkManager.getInstance(this).enqueue(reminderRequest)
     }
+
 
     override fun onDestroy() {
         super.onDestroy()

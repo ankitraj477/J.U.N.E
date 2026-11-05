@@ -74,24 +74,32 @@ class LocalAssistantEngine {
             }
         }
 
-        // 5. Reminders (WorkManager)
+        // 5. Reminders (WorkManager with Natural Time Delay Parsing)
         val reminderTriggers = listOf("remind me to ", "remind me ", "set reminder for ", "set reminder to ", "reminder ")
         for (trigger in reminderTriggers) {
             if (lower.startsWith(trigger)) {
-                val target = trimmed.substring(trigger.length).trim()
-                if (target.isNotEmpty()) {
+                val rawTarget = trimmed.substring(trigger.length).trim()
+                if (rawTarget.isNotEmpty()) {
+                    val (cleanTarget, delaySeconds, timePhrase) = parseDelayAndCleanTarget(rawTarget)
                     val proposal = ActionProposal(
                         id = UUID.randomUUID().toString(),
                         actionType = "reminder.create",
-                        target = target,
+                        target = cleanTarget,
                         riskLevel = RiskLevel.LOW,
                         status = ActionStatus.AUTHORIZED,
-                        reason = "Offline scheduled reminder"
+                        reason = "Offline scheduled reminder",
+                        parameters = mapOf("delay_seconds" to delaySeconds.toString())
                     )
-                    return Pair("Reminder scheduled: '$target'", proposal)
+                    val msg = if (timePhrase.isNotEmpty()) {
+                        "Reminder set for $timePhrase from now: '$cleanTarget'"
+                    } else {
+                        "Reminder scheduled: '$cleanTarget'"
+                    }
+                    return Pair(msg, proposal)
                 }
             }
         }
+
 
         // 6. Application Launch
         val launchTriggers = listOf("open ", "launch ", "start ")
@@ -138,4 +146,24 @@ class LocalAssistantEngine {
             null
         )
     }
+
+    private fun parseDelayAndCleanTarget(rawTarget: String): Triple<String, Long, String> {
+        val regex = Regex("""\s+in\s+(\d+)\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)$""", RegexOption.IGNORE_CASE)
+        val match = regex.find(rawTarget)
+        if (match != null) {
+            val num = match.groupValues[1].toLongOrNull() ?: 10L
+            val unit = match.groupValues[2].lowercase(Locale.ROOT)
+            val seconds = when {
+                unit.startsWith("sec") -> num
+                unit.startsWith("min") -> num * 60L
+                unit.startsWith("hour") || unit.startsWith("hr") -> num * 3600L
+                else -> num
+            }
+            val cleanTarget = rawTarget.substring(0, match.range.first).trim()
+            val timePhrase = "$num ${match.groupValues[2]}"
+            return Triple(cleanTarget, seconds, timePhrase)
+        }
+        return Triple(rawTarget, 10L, "")
+    }
 }
+

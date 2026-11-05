@@ -54,14 +54,17 @@ class LocalAssistantEngineTest {
     }
 
     @Test
-    fun testRemindMe() {
-        val (_, proposal) = engine.processInput("remind me to Call mom at 5pm")
+    fun testRemindMeWithNaturalTimeDelay() {
+        val (reply, proposal) = engine.processInput("remind me to say i love to babu in 1 minute")
         assertNotNull(proposal)
         assertEquals("reminder.create", proposal!!.actionType)
-        assertEquals("Call mom at 5pm", proposal.target)
+        assertEquals("say i love to babu", proposal.target)
+        assertEquals("60", proposal.parameters["delay_seconds"])
         assertEquals(RiskLevel.LOW, proposal.riskLevel)
         assertEquals(ActionStatus.AUTHORIZED, proposal.status)
+        assertTrue(reply.contains("Reminder set for 1 minute from now"))
     }
+
 
     @Test
     fun testAppLaunch() {
