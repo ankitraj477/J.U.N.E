@@ -77,6 +77,13 @@ class LocalAssistantEngineTest {
     }
 
     @Test
+    fun testStartTimerIsNotAppOpen() {
+        val (reply, proposal) = engine.processInput("start a timer")
+        assertNull(proposal)
+        assertTrue(reply.contains("I heard: \"start a timer\""))
+    }
+
+    @Test
     fun testDeleteHighRisk() {
         val (reply, proposal) = engine.processInput("delete confidential.docx")
         assertNotNull(proposal)

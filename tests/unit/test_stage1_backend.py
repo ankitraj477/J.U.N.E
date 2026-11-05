@@ -82,6 +82,15 @@ def test_api_chat_flow():
     assert data["intent"] == "chat"
     assert data["action"] is None
 
+    # Test word-boundary trigger matching: words starting with trigger prefix should not trigger commands
+    res_notes = client.post("/api/v1/intent", json={"text": "Notes are useful"})
+    assert res_notes.json()["intent"] == "chat"
+    assert res_notes.json()["action"] is None
+
+    res_open = client.post("/api/v1/intent", json={"text": "Opening hours?"})
+    assert res_open.json()["intent"] == "chat"
+    assert res_open.json()["action"] is None
+
 
 def test_api_command_execution_pipeline():
     # 1. Plan
@@ -112,3 +121,41 @@ def test_api_command_execution_pipeline():
     event_types = [e["event_type"] for e in audit_events]
     assert "action_proposed" in event_types
     assert "execution_completed" in event_types
+
+
+def test_api_execute_unauthorized_action_denied_even_if_user_approved():
+    # Attempting to execute an ungranted permission (storage.delete) with user_approved: True
+    action = {
+        "id": "unauth-1",
+        "action_type": "file.delete",
+        "target": "secret.txt",
+        "risk_level": "high",
+        "required_permissions": ["storage.delete"],
+        "status": "proposed",
+    }
+    res_exec = client.post(
+        "/api/v1/actions/execute", json={"action": action, "user_approved": True}
+    )
+    assert res_exec.status_code == 200
+    exec_data = res_exec.json()
+    assert exec_data["success"] is False
+    assert exec_data["decision"] == "deny"
+
+
+def test_api_execute_client_status_authorized_does_not_bypass_policy():
+    # Client sends status: "authorized" claiming storage.delete
+    action = {
+        "id": "spoof-1",
+        "action_type": "file.delete",
+        "target": "secret.txt",
+        "risk_level": "high",
+        "required_permissions": ["storage.delete"],
+        "status": "authorized",
+    }
+    res_exec = client.post(
+        "/api/v1/actions/execute", json={"action": action, "user_approved": False}
+    )
+    assert res_exec.status_code == 200
+    exec_data = res_exec.json()
+    assert exec_data["success"] is False
+    assert exec_data["decision"] == "deny"

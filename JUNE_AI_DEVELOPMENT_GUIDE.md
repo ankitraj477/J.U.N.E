@@ -2,7 +2,7 @@
 
 > **Purpose of this document:** This is the single source of truth for AI coding agents and human contributors working on J.U.N.E. Read it before proposing architecture, changing code, creating files, or implementing a feature. Follow the product principles, development workflow, stage gates, and engineering standards below.
 >
-> **Project status:** Product direction and high-level architecture have been agreed. The existing Python prototype has been inspected at source level, but the new architecture has not yet been implemented. Do not claim that planned components already exist.
+> **Project status:** Stages 0 (Foundation) and 1 (Safe Assistant Core & Android App Shell) are implemented and verified. Stage 2 (Layered Memory, Local Voice, Context Modes & WorkManager Reminders) is implemented with local SQLite persistence on Android and an in-memory backend store. Cloud integrations, encrypted sync, carrier call handling, and desktop/web clients remain planned work in upcoming stages.
 
 ---
 

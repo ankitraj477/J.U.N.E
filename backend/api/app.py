@@ -14,6 +14,7 @@ app = FastAPI(title="J.U.N.E. Safe Assistant Core", version="0.1.0")
 
 # Default granted permissions and core engines for Stage 1 & 2
 DEFAULT_PERMISSIONS = {"notes.write", "reminders.write", "system.launch"}
+active_proposals: dict[str, ActionProposal] = {}
 permission_engine = PermissionEngine(granted_permissions=DEFAULT_PERMISSIONS)
 action_planner = ActionPlanner()
 execution_runner = ExecutionRunner()
@@ -64,6 +65,7 @@ def config():
 def process_intent(req: MessageRequest):
     proposal = action_planner.plan(req.text)
     if proposal:
+        active_proposals[proposal.id] = proposal
         execution_runner.log_audit(
             AuditEventType.ACTION_PROPOSED,
             proposal.id,
@@ -84,43 +86,49 @@ def process_intent(req: MessageRequest):
 
 @app.post("/api/v1/actions/authorize", response_model=PermissionCheckResult)
 def authorize_action(action: ActionProposal):
-    result = permission_engine.evaluate(action)
+    canonical = active_proposals.get(action.id)
+    target_action = canonical if canonical is not None else action
+    result = permission_engine.evaluate(target_action)
     execution_runner.log_audit(
         AuditEventType.PERMISSION_EVALUATED,
-        action.id,
+        target_action.id,
         {"decision": result.decision.value, "reason": result.reason},
     )
     if result.decision == PermissionDecision.ALLOW:
-        action.status = ActionStatus.AUTHORIZED
+        target_action.status = ActionStatus.AUTHORIZED
     return result
 
 
 @app.post("/api/v1/actions/execute")
 def execute_action(req: ExecuteRequest):
-    action = req.action
+    canonical = active_proposals.get(req.action.id)
+    action = canonical if canonical is not None else req.action
 
-    # If user provided explicit approval for a confirmation-requiring action
-    if req.user_approved:
+    # Never trust client-supplied status. Re-evaluate policy on every execute call.
+    action.status = ActionStatus.PROPOSED
+    auth_result = permission_engine.evaluate(action)
+
+    if auth_result.decision == PermissionDecision.ALLOW:
+        action.status = ActionStatus.AUTHORIZED
+    elif auth_result.decision == PermissionDecision.REQUIRES_CONFIRMATION and req.user_approved:
         action.status = ActionStatus.APPROVED
         execution_runner.log_audit(
             AuditEventType.USER_APPROVED,
             action.id,
             {"approved": True},
         )
-    elif action.status == ActionStatus.PROPOSED:
-        # Check authorization if not already authorized
-        auth_result = permission_engine.evaluate(action)
-        if auth_result.decision == PermissionDecision.ALLOW:
-            action.status = ActionStatus.AUTHORIZED
-        else:
-            return {
-                "success": False,
-                "message": auth_result.reason,
-                "action": action,
-                "decision": auth_result.decision,
-            }
+    else:
+        return {
+            "success": False,
+            "message": auth_result.reason,
+            "action": action,
+            "decision": auth_result.decision,
+        }
 
     success, message = execution_runner.execute(action)
+    if success:
+        active_proposals.pop(action.id, None)
+
     return {
         "success": success,
         "message": message,

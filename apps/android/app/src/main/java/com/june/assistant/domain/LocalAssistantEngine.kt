@@ -102,7 +102,7 @@ class LocalAssistantEngine {
 
 
         // 6. Application Launch
-        val launchTriggers = listOf("open ", "launch ", "start ")
+        val launchTriggers = listOf("open ", "launch ")
         for (trigger in launchTriggers) {
             if (lower.startsWith(trigger)) {
                 val target = trimmed.substring(trigger.length).trim()

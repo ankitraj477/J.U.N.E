@@ -35,4 +35,3 @@ class MemoryStore:
 
     def clear(self):
         self._memories.clear()
-

@@ -25,7 +25,7 @@ class ActionPlanner:
         for trigger, (action_type, risk, perms) in sorted(
             self.ACTION_MAP.items(), key=lambda x: len(x[0]), reverse=True
         ):
-            if normalized.startswith(trigger):
+            if normalized == trigger or normalized.startswith(f"{trigger} "):
                 target = normalized[len(trigger) :].strip()
                 if not target:
                     # Incomplete target, cannot form a valid proposal without clarification

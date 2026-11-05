@@ -10,7 +10,7 @@ Stage 2 adds personal assistant capabilities: layered memory (working, episodic,
 ## Decision
 1. **Layered Memory Model & Non-Authorization:** Memory items are classified by type (`working`, `episodic`, `semantic`, `preference`, `procedural`) and provenance (`user_stated` vs `inferred`). Per core philosophy, memory never grants action authorization. Inferred memories are capped in confidence.
 2. **Explicit Consent for Sensitive Data:** Sensitive memories require explicit user consent flags before retention.
-3. **Android Platform TTS & Speech Recognition:** Leverages Android's built-in `TextToSpeech` and `SpeechRecognizer` for zero-cost, offline-capable voice interactions. Voice responses can be toggled on or off at any time.
+3. **Android Platform TTS & Speech Recognition:** Leverages Android's built-in `TextToSpeech` for local speech synthesis and `SpeechRecognizer` for voice input. Note that `SpeechRecognizer` availability and network usage depend on the selected system recognition engine (which may route audio to server-side recognizers on certain devices). Voice responses can be toggled on or off at any time.
 4. **Android WorkManager Reminders:** Schedules reminders using `WorkManager` so that notification alarms persist and fire reliably even after the app is backgrounded or the device is restarted.
 5. **Context Modes:** Supports explicit context modes (`Focus`, `Office`, `Home`, `Sleep`) to adapt notification priority and assistant tone.
 

@@ -18,7 +18,7 @@ class JuneDatabase private constructor(context: Context) : SQLiteOpenHelper(
 ) {
     private val messagesFlow = MutableStateFlow<List<MessageEntity>>(emptyList())
 
-    init {
+    suspend fun loadInitial() = withContext(Dispatchers.IO) {
         refreshMessages()
     }
 
@@ -55,6 +55,7 @@ class JuneDatabase private constructor(context: Context) : SQLiteOpenHelper(
         onCreate(db)
     }
 
+    @Synchronized
     private fun refreshMessages() {
         val list = mutableListOf<MessageEntity>()
         val db = readableDatabase

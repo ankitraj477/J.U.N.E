@@ -1,5 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from backend.api.app import app
 from backend.memory.store import MemoryStore
@@ -93,3 +94,11 @@ def test_api_context_mode():
     res_set = client.post("/api/v1/context-mode", json={"mode": "focus"})
     assert res_set.status_code == 200
     assert res_set.json()["current_mode"] == "focus"
+
+
+def test_memory_confidence_range_validation():
+    with pytest.raises(ValidationError):
+        MemoryItem(key="invalid_conf", content="test", confidence=1.5)
+
+    with pytest.raises(ValidationError):
+        MemoryItem(key="invalid_conf", content="test", confidence=-0.1)

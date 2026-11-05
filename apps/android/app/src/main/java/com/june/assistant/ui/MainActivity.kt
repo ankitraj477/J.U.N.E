@@ -27,6 +27,7 @@ import com.june.assistant.ui.screens.ConversationScreen
 import com.june.assistant.ui.theme.JuneTheme
 import com.june.assistant.voice.VoiceManager
 import com.june.assistant.worker.ReminderWorker
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
@@ -46,9 +47,24 @@ class MainActivity : ComponentActivity() {
 
         requestRequiredPermissions()
 
-        voiceManager = VoiceManager(this) { spokenText ->
-            handleUserMessage(spokenText)
+        lifecycleScope.launch(Dispatchers.IO) {
+            db.loadInitial()
         }
+
+        voiceManager = VoiceManager(
+            context = this,
+            onSpeechResult = { spokenText -> handleUserMessage(spokenText) },
+            onSpeechError = { errorMsg ->
+                lifecycleScope.launch {
+                    val err = MessageEntity(
+                        id = java.util.UUID.randomUUID().toString(),
+                        text = "🎙️ $errorMsg",
+                        isUser = false
+                    )
+                    db.messageDao().insertMessage(err)
+                }
+            }
+        )
 
         // Observe local SQLite database messages
         lifecycleScope.launch {
@@ -165,19 +181,31 @@ class MainActivity : ComponentActivity() {
 
     private fun handleApproveAction(action: ActionProposal) {
         lifecycleScope.launch {
+            val current = db.actionDao().getActionById(action.id)
+            if (current?.status != ActionStatus.PROPOSED.value) return@launch
+
+            val isExecuted = action.actionType != "file.delete"
+            val targetStatus = if (isExecuted) ActionStatus.COMPLETED else ActionStatus.APPROVED
+            val reasonText = if (isExecuted) "Approved and executed by user" else "Approved by user (execution pending OS adapter)"
+            val confirmText = if (isExecuted) {
+                "Action confirmed and executed: ${action.actionType} on '${action.target}'"
+            } else {
+                "Action approved: ${action.actionType} on '${action.target}' (execution pending OS adapter)"
+            }
+
             val updated = ActionEntity(
                 id = action.id,
                 actionType = action.actionType,
                 target = action.target,
                 riskLevel = action.riskLevel.value,
-                status = ActionStatus.COMPLETED.value,
-                reason = "Approved and executed by user"
+                status = targetStatus.value,
+                reason = reasonText
             )
             db.actionDao().insertOrUpdateAction(updated)
 
             val confirmMsg = MessageEntity(
                 id = java.util.UUID.randomUUID().toString(),
-                text = "Action confirmed and executed: ${action.actionType} on '${action.target}'",
+                text = confirmText,
                 isUser = false
             )
             db.messageDao().insertMessage(confirmMsg)
@@ -187,6 +215,9 @@ class MainActivity : ComponentActivity() {
 
     private fun handleCancelAction(action: ActionProposal) {
         lifecycleScope.launch {
+            val current = db.actionDao().getActionById(action.id)
+            if (current?.status != ActionStatus.PROPOSED.value) return@launch
+
             val updated = ActionEntity(
                 id = action.id,
                 actionType = action.actionType,

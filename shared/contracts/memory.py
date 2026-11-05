@@ -31,7 +31,7 @@ class MemoryItem(BaseModel):
     source: MemorySource = MemorySource.USER_STATED
     key: str
     content: str
-    confidence: float = 1.0
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0)
     sensitive: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     provenance: str = "direct_input"
